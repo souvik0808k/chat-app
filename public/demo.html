@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Demo - Two Users</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+        padding: 20px;
+        margin: 0;
+      }
+
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+
+      .demo-container {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        align-items: flex-start;
+      }
+
+      .chat-container {
+        width: 400px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .chat-header {
+        background: #4caf50;
+        color: white;
+        padding: 15px;
+        font-size: 18px;
+        text-align: center;
+        font-weight: bold;
+      }
+
+      .user1 .chat-header {
+        background: #2196F3;
+      }
+
+      .user2 .chat-header {
+        background: #FF9800;
+      }
+
+      .status {
+        padding: 10px;
+        text-align: center;
+        font-size: 12px;
+        background: #f0f0f0;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .status.connected {
+        background: #c8e6c9;
+        color: #2e7d32;
+      }
+
+      .chat-messages {
+        flex: 1;
+        padding: 10px;
+        overflow-y: auto;
+        height: 300px;
+        background: #fafafa;
+      }
+
+      .message {
+        margin: 8px 0;
+        padding: 10px 12px;
+        border-radius: 12px;
+        max-width: 70%;
+        font-size: 14px;
+        word-wrap: break-word;
+        animation: fadeIn 0.3s;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .sent {
+        background: #dcf8c6;
+        margin-left: auto;
+        text-align: right;
+      }
+
+      .received {
+        background: #fff;
+        border: 1px solid #ddd;
+        margin-right: auto;
+      }
+
+      .chat-input {
+        display: flex;
+        border-top: 1px solid #ddd;
+      }
+
+      .chat-input input {
+        flex: 1;
+        border: none;
+        padding: 12px;
+        font-size: 14px;
+        outline: none;
+      }
+
+      .chat-input button {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      .user1 .chat-input button {
+        background: #2196F3;
+      }
+
+      .user2 .chat-input button {
+        background: #FF9800;
+      }
+
+      .chat-input button:hover {
+        opacity: 0.9;
+      }
+
+      .chat-input button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .user-info {
+        padding: 10px;
+        background: #f9f9f9;
+        border-bottom: 1px solid #ddd;
+        font-size: 11px;
+        color: #666;
+      }
+
+      .connect-btn {
+        width: 100%;
+        padding: 10px;
+        background: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+      }
+
+      .user1 .connect-btn {
+        background: #2196F3;
+      }
+
+      .user2 .connect-btn {
+        background: #FF9800;
+      }
+
+      .connect-btn:hover {
+        opacity: 0.9;
+      }
+
+      .instructions {
+        max-width: 850px;
+        margin: 0 auto 20px;
+        background: #fff3cd;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #ffc107;
+      }
+
+      .instructions h3 {
+        margin-top: 0;
+        color: #856404;
+      }
+
+      .instructions ol {
+        margin-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🚀 Real-Time Chat Demo - Two Users</h1>
+
+    <div class="instructions">
+      <h3>📋 Instructions:</h3>
+      <ol>
+        <li>Click <strong>"Connect"</strong> on BOTH chat windows</li>
+        <li>Type a message in either window</li>
+        <li>Watch it appear instantly in the other window! ✨</li>
+      </ol>
+    </div>
+
+    <div class="demo-container">
+      <!-- User 1 Chat -->
+      <div class="chat-container user1">
+        <div class="chat-header">👤 User 1 (Souvik)</div>
+        <div class="user-info">
+          ID: 698da533474294a835ac2da9<br>
+          Chatting with: 698af2f416a37d050517e116
+        </div>
+        <div class="status" id="status1">⚫ Not Connected</div>
+        <button class="connect-btn" id="connect1" onclick="connectUser1()">
+          🔌 Connect User 1
+        </button>
+        <div class="chat-messages" id="messages1"></div>
+        <div class="chat-input">
+          <input
+            type="text"
+            id="input1"
+            placeholder="Type a message..."
+            onkeypress="if(event.key==='Enter') sendMessage1()"
+          />
+          <button onclick="sendMessage1()" id="sendBtn1" disabled>Send</button>
+        </div>
+      </div>
+
+      <!-- User 2 Chat -->
+      <div class="chat-container user2">
+        <div class="chat-header">👤 User 2 (Original Souvik)</div>
+        <div class="user-info">
+          ID: 698af2f416a37d050517e116<br>
+          Chatting with: 698da533474294a835ac2da9
+        </div>
+        <div class="status" id="status2">⚫ Not Connected</div>
+        <button class="connect-btn" id="connect2" onclick="connectUser2()">
+          🔌 Connect User 2
+        </button>
+        <div class="chat-messages" id="messages2"></div>
+        <div class="chat-input">
+          <input
+            type="text"
+            id="input2"
+            placeholder="Type a message..."
+            onkeypress="if(event.key==='Enter') sendMessage2()"
+          />
+          <button onclick="sendMessage2()" id="sendBtn2" disabled>Send</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_URL = "http://localhost:5000/api/chat/send";
+      const SOCKET_URL = "http://localhost:5000";
+
+      const USER1_ID = "698da533474294a835ac2da9";
+      const USER2_ID = "698af2f416a37d050517e116";
+
+      let socket1, socket2;
+      let connected1 = false;
+      let connected2 = false;
+
+      // User 1 Functions
+      function connectUser1() {
+        socket1 = io(SOCKET_URL);
+
+        socket1.on("connect", () => {
+          console.log("User 1 connected:", socket1.id);
+          socket1.emit("join", USER1_ID);
+          connected1 = true;
+          document.getElementById("status1").textContent = "🟢 Connected";
+          document.getElementById("status1").className = "status connected";
+          document.getElementById("connect1").disabled = true;
+          document.getElementById("sendBtn1").disabled = false;
+          addMessage1("✅ You are connected!", "system");
+        });
+
+        socket1.on("new_message", (data) => {
+          console.log("User 1 received message:", data);
+          addMessage1(data.message, "received");
+        });
+
+        socket1.on("connect_error", (error) => {
+          console.error("User 1 connection error:", error);
+          addMessage1("❌ Connection failed!", "system");
+        });
+      }
+
+      async function sendMessage1() {
+        const message = document.getElementById("input1").value;
+        if (!message) return;
+
+        try {
+          const res = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sender: USER1_ID,
+              receiver: USER2_ID,
+              message,
+            }),
+          });
+
+          const data = await res.json();
+          if (data.success) {
+            addMessage1(message, "sent");
+            document.getElementById("input1").value = "";
+          }
+        } catch (error) {
+          console.error("Send error:", error);
+        }
+      }
+
+      function addMessage1(text, type) {
+        const msgDiv = document.createElement("div");
+        msgDiv.className = type === "system" ? "" : `message ${type}`;
+        msgDiv.innerText = text;
+        if (type === "system") {
+          msgDiv.style.textAlign = "center";
+          msgDiv.style.padding = "8px";
+          msgDiv.style.color = "#666";
+          msgDiv.style.fontSize = "12px";
+        }
+        document.getElementById("messages1").appendChild(msgDiv);
+        document.getElementById("messages1").scrollTop = 9999;
+      }
+
+      // User 2 Functions
+      function connectUser2() {
+        socket2 = io(SOCKET_URL);
+
+        socket2.on("connect", () => {
+          console.log("User 2 connected:", socket2.id);
+          socket2.emit("join", USER2_ID);
+          connected2 = true;
+          document.getElementById("status2").textContent = "🟢 Connected";
+          document.getElementById("status2").className = "status connected";
+          document.getElementById("connect2").disabled = true;
+          document.getElementById("sendBtn2").disabled = false;
+          addMessage2("✅ You are connected!", "system");
+        });
+
+        socket2.on("new_message", (data) => {
+          console.log("User 2 received message:", data);
+          addMessage2(data.message, "received");
+        });
+
+        socket2.on("connect_error", (error) => {
+          console.error("User 2 connection error:", error);
+          addMessage2("❌ Connection failed!", "system");
+        });
+      }
+
+      async function sendMessage2() {
+        const message = document.getElementById("input2").value;
+        if (!message) return;
+
+        try {
+          const res = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sender: USER2_ID,
+              receiver: USER1_ID,
+              message,
+            }),
+          });
+
+          const data = await res.json();
+          if (data.success) {
+            addMessage2(message, "sent");
+            document.getElementById("input2").value = "";
+          }
+        } catch (error) {
+          console.error("Send error:", error);
+        }
+      }
+
+      function addMessage2(text, type) {
+        const msgDiv = document.createElement("div");
+        msgDiv.className = type === "system" ? "" : `message ${type}`;
+        msgDiv.innerText = text;
+        if (type === "system") {
+          msgDiv.style.textAlign = "center";
+          msgDiv.style.padding = "8px";
+          msgDiv.style.color = "#666";
+          msgDiv.style.fontSize = "12px";
+        }
+        document.getElementById("messages2").appendChild(msgDiv);
+        document.getElementById("messages2").scrollTop = 9999;
+      }
+    </script>
+  </body>
+</html>
