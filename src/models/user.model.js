@@ -42,4 +42,14 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("User", userSchema);
+// Create the User model
+const User = mongoose.model("User", userSchema);
+
+// Drop the old username index if it exists (from previous schema)
+User.init().then(() => {
+  User.collection.dropIndex('username_1').catch(() => {
+    // Index doesn't exist, ignore error
+  });
+});
+
+module.exports = User;
